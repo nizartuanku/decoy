@@ -1,0 +1,7 @@
+/decoy
+*.db
+license.key
+decoy-license.key
+issuer.key
+dist/
+node_modules/
