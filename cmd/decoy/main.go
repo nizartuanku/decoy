@@ -41,11 +41,11 @@ var issuerPublicKeyB64 = ""
 // channels/retention). The finer token-vs-honeypot-vs-advanced split lives in
 // decoy.DefaultCaps.
 var decoyTierLimits = map[license.Tier]license.Limits{
-	license.TierFree: {MaxTargets: 4, RetentionDays: 14, Channels: []string{"webhook"}},
+	license.TierFree: {MaxTargets: 4, RetentionDays: 14, Channels: []string{"webhook", "syslog"}},
 	license.TierPro: {MaxTargets: 60, RetentionDays: 365,
-		Channels: []string{"webhook", "email", "slack", "telegram"}, CustomInterval: true, ScanNow: true},
+		Channels: []string{"webhook", "syslog", "email", "slack", "telegram"}, CustomInterval: true, ScanNow: true},
 	license.TierTeam: {MaxTargets: 0, RetentionDays: 0,
-		Channels:  []string{"webhook", "email", "slack", "telegram", "pagerduty", "teams"},
+		Channels:  []string{"webhook", "syslog", "email", "slack", "telegram", "pagerduty", "teams"},
 		MultiUser: true, CustomInterval: true, ScanNow: true},
 }
 
@@ -54,6 +54,8 @@ func main() {
 	dbPath := flag.String("db", "decoy.db", "SQLite database path")
 	licFile := flag.String("license", "decoy-license.key", "license key file")
 	webhook := flag.String("webhook", "", "webhook URL for alerts")
+	syslogAddr := flag.String("syslog", "", "syslog collector host:port for findings, e.g. 127.0.0.1:5514 (point this at Loglight to correlate across products)")
+	syslogNet := flag.String("syslog-network", "udp", "syslog transport: udp or tcp")
 	baseURL := flag.String("base-url", "", "public base URL tokens are reached at (default http://<listen>)")
 	honeypotBind := flag.String("honeypot-bind", "0.0.0.0", "interface honeypots bind to")
 	dnsZone := flag.String("dns-zone", "", "delegated DNS zone for DNS tokens (empty = disabled)")
@@ -88,9 +90,15 @@ func main() {
 	// Alerts flush fast — a canary that waits 30s is still a canary, but 5s is
 	// better, and a scanner's burst still merges into one digest.
 	var disp *notify.Dispatcher
+	var channels []notify.Channel
 	if *webhook != "" {
-		disp = notify.NewDispatcher(notify.Config{FlushInterval: 5 * time.Second},
-			&notify.WebhookChannel{URL: *webhook})
+		channels = append(channels, &notify.WebhookChannel{URL: *webhook})
+	}
+	if *syslogAddr != "" {
+		channels = append(channels, &notify.SyslogChannel{Addr: *syslogAddr, Network: *syslogNet})
+	}
+	if len(channels) > 0 {
+		disp = notify.NewDispatcher(notify.Config{FlushInterval: 5 * time.Second}, channels...)
 		notify.BindScheduler(scheduler, disp)
 		defer disp.Close()
 	}
