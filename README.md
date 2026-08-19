@@ -81,6 +81,28 @@ to free limits.
   interfaces), on ports that are free on that host.
 - **DNS tokens** — need a delegated zone: `sudo ./decoy -dns-zone canary.example.com -dns-listen :53`.
 
+## Working with the other Sentinel tools
+
+Every tool in the line can emit its findings as syslog, which is how they feed
+each other:
+
+```bash
+decoy -syslog loglight.internal:5514        # udp by default
+decoy -syslog loglight.internal:5514 -syslog-network tcp
+```
+
+One RFC 3164 frame per finding, severity mapped onto the syslog severity so
+your collector's existing routing rules still work, and the source address
+carried in `src=` when the finding has one.
+
+Point it at [Loglight](https://github.com/nizartuanku/loglight) and its findings
+land next to Loglight's own detections: a Decoy trip from an address Loglight
+already saw port-scanning is raised as one critical incident with the timeline
+attached, rather than two alerts you have to join up yourself. Any other syslog
+collector works too — there is nothing Sentinel-specific about the format.
+
+Available on every tier, free included.
+
 ## Honest limits
 
 - Decoy is **detection by deception, not prevention** — it tells you someone's
