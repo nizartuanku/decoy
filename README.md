@@ -2,6 +2,12 @@
 
 **Self-hosted canary tokens & honeypots — silent until an intruder trips one.**
 
+![Decoy alerting the moment a honeypot admin panel is touched, capturing the credentials that were tried](docs/demo.gif)
+
+*Real run: four traps armed on the free tier. One POST to a decommissioned admin panel that nobody
+should ever touch — and the alert is on screen before the request finishes, with the username and
+password the intruder tried.*
+
 Intruders spend weeks inside before anyone notices. Decoy shrinks that to
 seconds. Plant tokens and honeypots that *look valuable* — a "backup keys" link,
 a "salaries" spreadsheet, a juicy-looking database port — where only an intruder
