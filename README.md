@@ -65,7 +65,7 @@ base-URL and honeypot placement details.
 | Support | Community | Email | Priority |
 
 Pro ($29/mo) and Team ($99/mo) licenses, each with a 14-day free trial:
-**https://whop.com/nizar-tuanku/decoy-canary-honeypots**
+**https://whop.com/nizar-tuanku/decoy-canary-honeypots?utm_source=github**
 
 A license key activates instantly and validates **offline** — Decoy never needs
 to reach our servers. An expired key never disarms your traps; it simply returns
@@ -119,6 +119,6 @@ Available on every tier, free included.
 
 A practising network security engineer. Part of the Sentinel line of
 self-hosted security tools. Watch your certs with
-[CertWatch](https://whop.com/nizar-tuanku/certwatch-tls-monitor) and your
-perimeter with [Attack Surface Monitor](https://whop.com/nizar-tuanku/attack-surface-monitor) —
+[CertWatch](https://whop.com/nizar-tuanku/certwatch-tls-monitor?utm_source=github) and your
+perimeter with [Attack Surface Monitor](https://whop.com/nizar-tuanku/attack-surface-monitor?utm_source=github) —
 Decoy watches for the intruder who's already past both.
