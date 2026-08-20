@@ -25,6 +25,8 @@ haystack; you plant a needle that screams.
 
 > *A vuln scanner asks "is it exploitable?" Decoy answers the question that comes first: "is someone already inside?"*
 
+**Background reading** — [self-hosted deception: where it fits, and where it does not](https://nizartuanku.github.io/thinkst-canary-alternative.html), including an honest comparison with Canarytokens, OpenCanary and Thinkst Canary.
+
 ## Plant only in your own systems
 
 Decoy is bait for **your** environment, to catch someone in **your**
