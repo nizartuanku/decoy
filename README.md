@@ -43,11 +43,13 @@ is offline cryptography — no phone-home, ever.
 ## Quick start
 
 ```bash
+git clone https://github.com/nizartuanku/decoy && cd decoy
+
 # Docker
-docker run -d -p 127.0.0.1:8424:8424 -v decoy-data:/data decoy
+docker build -t decoy . && docker run -d -p 127.0.0.1:8424:8424 -v decoy-data:/data decoy
 
 # Or the bare binary
-./decoy
+go build ./cmd/decoy && ./decoy
 ```
 
 Open `http://127.0.0.1:8424`, plant a trap, copy its link into somewhere only an
