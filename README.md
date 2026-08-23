@@ -85,7 +85,7 @@ to free limits.
   interfaces), on ports that are free on that host.
 - **DNS tokens** — need a delegated zone: `sudo ./decoy -dns-zone canary.example.com -dns-listen :53`.
 
-## Working with the other Sentinel tools
+## Working with the other Hexward tools
 
 Every tool in the line can emit its findings as syslog, which is how they feed
 each other:
@@ -103,7 +103,7 @@ Point it at [Loglight](https://github.com/nizartuanku/loglight) and its findings
 land next to Loglight's own detections: a Decoy trip from an address Loglight
 already saw port-scanning is raised as one critical incident with the timeline
 attached, rather than two alerts you have to join up yourself. Any other syslog
-collector works too — there is nothing Sentinel-specific about the format.
+collector works too — there is nothing Hexward-specific about the format.
 
 Available on every tier, free included.
 
@@ -121,8 +121,8 @@ Available on every tier, free included.
 
 ## Built by
 
-A practising network security engineer. Part of the Sentinel line of
+A practising network security engineer. Part of the Hexward line of
 self-hosted security tools. Watch your certs with
-[CertWatch](https://whop.com/nizar-tuanku/certwatch-tls-monitor?utm_source=github) and your
+[CertLight](https://whop.com/nizar-tuanku/certlight-tls-monitor?utm_source=github) and your
 perimeter with [Attack Surface Monitor](https://whop.com/nizar-tuanku/attack-surface-monitor?utm_source=github) —
 Decoy watches for the intruder who's already past both.
