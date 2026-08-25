@@ -1,4 +1,8 @@
+# The compiled binary at the repo root. The trailing "!" line keeps the
+# decoy/ PACKAGE directory tracked — without it git silently ignores every
+# new file added there, and the repo stops compiling for anyone who clones it.
 /decoy
+!/decoy/
 *.db
 license.key
 decoy-license.key
