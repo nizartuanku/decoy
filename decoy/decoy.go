@@ -43,12 +43,12 @@ const (
 // only in the artefact handed to the user); honeypots and DNS tokens trip
 // through their own listeners.
 type Deployment struct {
-	ID        string    `json:"id"`       // short, unguessable; used in URLs and paths
-	Kind      TrapKind  `json:"kind"`     //
-	Label     string    `json:"label"`    // user-facing name, e.g. "2026_salaries.xlsx"
-	Port      int       `json:"port"`     // honeypot only: the bound TCP port
-	Service   string    `json:"service"`  // honeypot only: ssh|rdp|http|postgres|mysql|redis|mongodb
-	Host      string    `json:"host"`     // dns_token only: the trap hostname
+	ID        string    `json:"id"`      // short, unguessable; used in URLs and paths
+	Kind      TrapKind  `json:"kind"`    //
+	Label     string    `json:"label"`   // user-facing name, e.g. "2026_salaries.xlsx"
+	Port      int       `json:"port"`    // honeypot only: the bound TCP port
+	Service   string    `json:"service"` // honeypot only: ssh|rdp|http|postgres|mysql|redis|mongodb
+	Host      string    `json:"host"`    // dns_token only: the trap hostname
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -145,8 +145,8 @@ func tripFinding(t Trip) core.Finding {
 // shows on the dashboard instantly and the later Collect does NOT re-notify
 // it), and fires an immediate notification.
 type TripSink struct {
-	Store store.Store   // core finding store (Upsert)
-	Decoy Store         // decoy deployment/trip store
+	Store store.Store        // core finding store (Upsert)
+	Decoy Store              // decoy deployment/trip store
 	Disp  *notify.Dispatcher // optional; nil disables notifications
 	Now   func() time.Time
 	NewID func(t time.Time) (string, error)

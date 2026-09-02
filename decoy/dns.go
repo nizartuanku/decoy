@@ -14,10 +14,10 @@ import (
 // This is a deliberately minimal responder: enough to catch a resolution, not
 // a general-purpose name server. Only start it when a zone has been delegated.
 type DNSResponder struct {
-	Store       Store
-	Sink        *TripSink
-	SinkholeIP  net.IP // A-record answer; defaults to 127.0.0.1
-	conn        *net.UDPConn
+	Store      Store
+	Sink       *TripSink
+	SinkholeIP net.IP // A-record answer; defaults to 127.0.0.1
+	conn       *net.UDPConn
 }
 
 // Start binds the responder on addr (e.g. ":53" or "127.0.0.1:0" in tests) and
@@ -173,18 +173,18 @@ func buildDNSResponse(req []byte, qtype uint16, ip net.IP) []byte {
 	// Header: copy id, set flags QR=1 AA=1, QDCOUNT=1.
 	header := make([]byte, 12)
 	copy(header, req[:12])
-	header[2] = 0x84 // QR=1, Opcode=0, AA=1
-	header[3] = 0x00 // RA=0, RCODE=0
+	header[2] = 0x84                           // QR=1, Opcode=0, AA=1
+	header[3] = 0x00                           // RA=0, RCODE=0
 	binary.BigEndian.PutUint16(header[4:6], 1) // QDCOUNT
 
 	answers := uint16(0)
 	var ans []byte
 	if (qtype == 1 || qtype == 255) && ip.To4() != nil { // A or ANY
-		ans = append(ans, 0xC0, 0x0C) // name pointer to offset 12
-		ans = append(ans, 0x00, 0x01) // TYPE A
-		ans = append(ans, 0x00, 0x01) // CLASS IN
+		ans = append(ans, 0xC0, 0x0C)             // name pointer to offset 12
+		ans = append(ans, 0x00, 0x01)             // TYPE A
+		ans = append(ans, 0x00, 0x01)             // CLASS IN
 		ans = append(ans, 0x00, 0x00, 0x00, 0x1e) // TTL 30
-		ans = append(ans, 0x00, 0x04) // RDLENGTH 4
+		ans = append(ans, 0x00, 0x04)             // RDLENGTH 4
 		ans = append(ans, ip.To4()...)
 		answers = 1
 	}
