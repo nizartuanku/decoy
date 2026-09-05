@@ -17,6 +17,7 @@
 package decoy
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/nizartuanku/decoy/core"
@@ -110,11 +111,55 @@ func armedFinding(d Deployment) core.Finding {
 	}
 }
 
-// tripFinding is the finding for one recorded trip. Its fingerprint embeds the
-// unique trip id, so every distinct trip is its own finding and none ever
-// collapse or auto-resolve. Used by BOTH the real-time TripSink (Path A) and
-// the Collector (Path B) so the two paths agree on identity.
-func tripFinding(t Trip) core.Finding {
+// DefaultDigestWindow is how long repeated touches of the same trap, from the
+// same source, at the same thing count as ONE incident. A scan or a
+// brute-force runs for minutes and would otherwise raise an alert per request;
+// a visit hours later is a separate event and must alert again. Fifteen
+// minutes is the default, not a law — see TripSink.DigestWindow.
+const DefaultDigestWindow = 15 * time.Minute
+
+func digestWindow(w time.Duration) time.Duration {
+	if w <= 0 {
+		return DefaultDigestWindow
+	}
+	return w
+}
+
+// burstKey names the actor and the act: the same source touching the same
+// thing on the same trap. A DIFFERENT source IP is a different intruder and
+// never folds into an existing burst, however busy the first one is.
+func burstKey(t Trip) string {
+	var what string
+	for _, k := range []string{"path", "port", "service", "query", "name"} {
+		if v, ok := t.Detail[k]; ok {
+			what = fmt.Sprint(v)
+			break
+		}
+	}
+	return t.DeploymentID + "|" + t.SourceIP + "|" + string(t.Kind) + "|" + what
+}
+
+// tripDiscriminator buckets a trip into a fixed window. Bucketing by wall
+// clock rather than by "time since the last touch" is deliberate: it is
+// computable from the trip alone, so the real-time sink (Path A) and the
+// poll-driven collector (Path B) derive the SAME identity without sharing
+// state. The cost is a boundary — two touches either side of it are two
+// findings — which is the honest failure direction for an intrusion alert.
+func tripDiscriminator(t Trip, window time.Duration) string {
+	bucket := t.At.UTC().Truncate(digestWindow(window)).Format(time.RFC3339)
+	return burstKey(t) + "@" + bucket
+}
+
+// tripFinding is the finding for a single recorded trip (count 1).
+func tripFinding(t Trip, window time.Duration) core.Finding {
+	return tripFindingN(t, window, 1, t.At, t.At)
+}
+
+// tripFindingN is the finding for a burst of touches that share one
+// discriminator: same trap, same source, same thing touched, same window. The
+// individual trips are still stored, every one of them — this collapses the
+// ALERT, never the evidence.
+func tripFindingN(t Trip, window time.Duration, count int, first, last time.Time) core.Finding {
 	ip := t.SourceIP
 	if ip == "" {
 		ip = "an unknown source"
@@ -124,15 +169,23 @@ func tripFinding(t Trip) core.Finding {
 		"kind":          string(t.Kind),
 		"source_ip":     t.SourceIP,
 		"at":            t.At.UTC().Format(time.RFC3339),
+		"count":         count,
+		"first_seen":    first.UTC().Format(time.RFC3339),
+		"last_seen":     last.UTC().Format(time.RFC3339),
+		"digest_window": digestWindow(window).String(),
 	}
 	for k, v := range t.Detail {
 		ev[k] = v
 	}
+	title := "DECOY TRIPPED: " + t.Label + " touched by " + ip
+	if count > 1 {
+		title = fmt.Sprintf("DECOY TRIPPED: %s touched %d times by %s", t.Label, count, ip)
+	}
 	return core.Finding{
-		Fingerprint: core.Fingerprint(ModuleID, t.DeploymentID, "trap.tripped", t.ID),
+		Fingerprint: core.Fingerprint(ModuleID, t.DeploymentID, "trap.tripped", tripDiscriminator(t, window)),
 		Target:      t.DeploymentID, // MUST equal the scanned canonical so reconcile groups it
 		Check:       "trap.tripped",
-		Title:       "DECOY TRIPPED: " + t.Label + " touched by " + ip,
+		Title:       title,
 		Severity:    t.Kind.tripSeverity(),
 		Remediation: "Investigate " + ip + " now. A legitimate user has no reason to touch this — treat it as a possible intrusion.",
 		Evidence:    ev,
@@ -150,6 +203,10 @@ type TripSink struct {
 	Disp  *notify.Dispatcher // optional; nil disables notifications
 	Now   func() time.Time
 	NewID func(t time.Time) (string, error)
+	// DigestWindow collapses repeated touches of the same trap, by the same
+	// source, at the same thing into one finding and ONE notification. Zero
+	// means DefaultDigestWindow.
+	DigestWindow time.Duration
 }
 
 // Record handles one trip end-to-end (Path A). It is safe to call from any
@@ -175,25 +232,64 @@ func (s *TripSink) Record(t Trip) error {
 
 	// Write the finding directly as open — NOT through reconcile, which would
 	// auto-resolve the deployment's other trips. A trip is append-only.
-	f := tripFinding(t)
-	rid, err := s.newID(t.At)
-	if err != nil {
-		return err
+	//
+	// Repeated touches inside one digest window share a fingerprint, so this
+	// Upsert updates the existing finding instead of adding another: the count
+	// climbs, LastSeen moves, and NO second notification is sent. That is the
+	// whole of "never a flood" — twenty requests are one alert, and all twenty
+	// trips remain in the store as evidence.
+	f := tripFinding(t, s.DigestWindow)
+	first, last := t.At, t.At
+	count := 1
+	rid := ""
+	repeat := false
+	if prev, ok, err := s.Store.Get(ModuleID, f.Fingerprint); err == nil && ok {
+		repeat = true
+		rid = prev.ID
+		count = evidenceCount(prev.Evidence) + 1
+		first = prev.FirstSeen
+		if last.Before(prev.LastSeen) {
+			last = prev.LastSeen
+		}
+		f = tripFindingN(t, s.DigestWindow, count, first, last)
+	}
+	if rid == "" {
+		id, err := s.newID(t.At)
+		if err != nil {
+			return err
+		}
+		rid = id
 	}
 	rec := store.Record{Finding: f}
 	rec.ID = rid
 	rec.Module = ModuleID
 	rec.Status = core.StatusOpen
-	rec.FirstSeen = t.At
-	rec.LastSeen = t.At
+	rec.FirstSeen = first
+	rec.LastSeen = last
 	if err := s.Store.Upsert(rec); err != nil {
 		return err
 	}
 
-	if s.Disp != nil {
+	// One burst, one notification. A repeat inside the window is already on the
+	// dashboard with a rising count; paging someone again adds noise, not news.
+	if s.Disp != nil && !repeat {
 		s.Disp.Enqueue(notify.Event{Kind: notify.KindOpened, Module: ModuleID, Finding: f})
 	}
 	return nil
+}
+
+// evidenceCount reads the burst count off a stored finding. It survives the
+// JSON round-trip through SQLite, where an int comes back as float64.
+func evidenceCount(ev map[string]any) int {
+	switch v := ev["count"].(type) {
+	case int:
+		return v
+	case int64:
+		return int(v)
+	case float64:
+		return int(v)
+	}
+	return 1
 }
 
 func (s *TripSink) newID(t time.Time) (string, error) {

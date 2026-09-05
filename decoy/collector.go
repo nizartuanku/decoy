@@ -16,6 +16,11 @@ import (
 // TripSink carries the urgent signal; this keeps the books.
 type Collector struct {
 	store Store
+	// DigestWindow must match the TripSink's, or the two paths would compute
+	// different identities for the same trip and the poll would resurrect
+	// findings the sink already folded together. Zero means
+	// DefaultDigestWindow, which is what both use unless configured.
+	DigestWindow time.Duration
 }
 
 // New builds the Decoy collector over a decoy Store.
@@ -65,6 +70,18 @@ func (c *Collector) Collect(ctx context.Context, t core.Target) ([]core.Finding,
 	if err != nil {
 		return nil, err
 	}
+
+	// Fold trips into bursts exactly as the sink does. Emitting one finding per
+	// trip would hand the engine several findings sharing a fingerprint — the
+	// last would silently win and the count would be wrong. Order is preserved
+	// so the output stays deterministic across scans.
+	type burst struct {
+		trip        Trip
+		count       int
+		first, last time.Time
+	}
+	byID := map[string]*burst{}
+	var order []string
 	for _, tr := range trips {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -72,7 +89,25 @@ func (c *Collector) Collect(ctx context.Context, t core.Target) ([]core.Finding,
 		if tr.Label == "" {
 			tr.Label = dep.Label
 		}
-		out = append(out, tripFinding(tr))
+		k := tripDiscriminator(tr, c.DigestWindow)
+		b, seen := byID[k]
+		if !seen {
+			byID[k] = &burst{trip: tr, count: 1, first: tr.At, last: tr.At}
+			order = append(order, k)
+			continue
+		}
+		b.count++
+		if tr.At.Before(b.first) {
+			b.first = tr.At
+		}
+		if tr.At.After(b.last) {
+			b.last = tr.At
+			b.trip = tr // the most recent touch carries the detail shown
+		}
+	}
+	for _, k := range order {
+		b := byID[k]
+		out = append(out, tripFindingN(b.trip, c.DigestWindow, b.count, b.first, b.last))
 	}
 	return out, nil
 }
