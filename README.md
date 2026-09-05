@@ -121,7 +121,7 @@ Available on every tier, free included.
 
 ## Built by
 
-A practising network security engineer. Part of the Hexward line of
+Nizar Tuanku — Cybersecurity. Part of the Hexward line of
 self-hosted security tools. Watch your certs with
 [CertLight](https://whop.com/nizar-tuanku/certlight-tls-monitor?utm_source=github) and your
 perimeter with [Attack Surface Monitor](https://whop.com/nizar-tuanku/attack-surface-monitor?utm_source=github) —
