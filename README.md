@@ -21,7 +21,7 @@ haystack; you plant a needle that screams.
 - **Document beacons** — a `.docx`/`.xlsx`/`.pdf` that phones home the moment it's opened, with the opener's IP.
 - **Honeypot services** — fake SSH/RDP/admin-panel/database ports that log every connection and every credential tried.
 - **DNS & cloud-credential traps** — catch scanners that resolve before they connect, and attackers harvesting fake keys (advanced).
-- **Alerts with the attacker's fingerprints** — source IP, time, what they touched. Repeated touches from the same trap, the same source IP and the same target inside a 15-minute window fold into one finding and one notification; every trip is still stored as evidence with a count and first/last seen.
+- **Alerts with the attacker's fingerprints** — source IP, time, what they touched. Repeated touches from the same trap, the same source IP and the same target inside a 15-minute window fold into one finding and one immediate notification; when that window closes, a second short notification reports how many touches there were. Every trip is still stored as evidence with a count and first/last seen.
 
 > *A vuln scanner asks "is it exploitable?" Decoy answers the question that comes first: "is someone already inside?"*
 
