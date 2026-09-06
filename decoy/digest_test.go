@@ -3,9 +3,11 @@ package decoy
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/nizartuanku/decoy/core"
 	"github.com/nizartuanku/decoy/notify"
 	"github.com/nizartuanku/decoy/store"
 )
@@ -149,5 +151,103 @@ func TestDigest_OneNotificationPerBurst(t *testing.T) {
 	opened := cap.opened()
 	if len(opened) != 2 {
 		t.Fatalf("want 2 alerts (one per burst), got %d", len(opened))
+	}
+}
+
+// P-4b (6 Sep 2026): the burst notification was correct in number and wrong in
+// content — it was the FIRST touch, so it could not say how many followed.
+// "touched 20 times" lived only on the dashboard. When the window closes, one
+// summary must go out carrying the count.
+func TestDigest_WindowCloseSendsOneCountedSummary(t *testing.T) {
+	fstore, dstore := store.NewMemStore(), NewMemStore()
+	cap := &capCh{}
+	disp := notify.NewDispatcher(notify.Config{FlushInterval: time.Hour}, cap)
+	n := 0
+	s := &TripSink{
+		Store: fstore, Decoy: dstore, Disp: disp, DigestWindow: 15 * time.Minute,
+		NewID: func(tm time.Time) (string, error) { n++; return fmt.Sprintf("id-%04d", n), nil },
+	}
+	for i := 0; i < 20; i++ {
+		touch(t, s, t0.Add(time.Duration(i)*time.Second), "203.0.113.9", "/admin")
+	}
+	// Nothing extra before the window closes: the first alert is the only one.
+	if got := s.FlushDigests(t0.Add(time.Minute)); len(got) != 0 {
+		t.Fatalf("no summary is due before the window closes, got %d", len(got))
+	}
+	// t0 is 10:00:00, so the bucket ends at 10:15:00.
+	if got := s.FlushDigests(t0.Add(20 * time.Minute)); len(got) != 1 {
+		t.Fatalf("one closed burst must produce one summary, got %d", len(got))
+	}
+	disp.Close()
+
+	opened := cap.opened()
+	if len(opened) != 2 {
+		t.Fatalf("20 identical touches must be exactly 2 notifications (first + summary), got %d", len(opened))
+	}
+	var summary *core.Finding
+	for i := range opened {
+		if opened[i].Evidence["summary"] == true {
+			summary = &opened[i]
+		}
+	}
+	if summary == nil {
+		t.Fatal("no summary notification was sent")
+	}
+	if got := evidenceCount(summary.Evidence); got != 20 {
+		t.Fatalf("summary count must be 20, got %d", got)
+	}
+	if !strings.Contains(summary.Title, "20 times") {
+		t.Fatalf("the summary must say how many times: %q", summary.Title)
+	}
+	if !strings.Contains(summary.Title, "203.0.113.9") || !strings.Contains(summary.Title, "15 min") {
+		t.Fatalf("the summary must name the source and the window: %q", summary.Title)
+	}
+}
+
+// Two intruders are two bursts, so two first alerts and two summaries — never
+// one merged count that hides that a second address was involved.
+func TestDigest_TwoSourcesGiveFourNotifications(t *testing.T) {
+	fstore, dstore := store.NewMemStore(), NewMemStore()
+	cap := &capCh{}
+	disp := notify.NewDispatcher(notify.Config{FlushInterval: time.Hour}, cap)
+	n := 0
+	s := &TripSink{
+		Store: fstore, Decoy: dstore, Disp: disp, DigestWindow: 15 * time.Minute,
+		NewID: func(tm time.Time) (string, error) { n++; return fmt.Sprintf("id-%04d", n), nil },
+	}
+	for i := 0; i < 20; i++ {
+		touch(t, s, t0.Add(time.Duration(i)*time.Second), "203.0.113.9", "/admin")
+	}
+	for i := 0; i < 20; i++ {
+		touch(t, s, t0.Add(time.Duration(i)*time.Second), "198.51.100.4", "/admin")
+	}
+	if got := s.FlushDigests(t0.Add(20 * time.Minute)); len(got) != 2 {
+		t.Fatalf("two bursts must produce two summaries, got %d", len(got))
+	}
+	disp.Close()
+	if got := len(cap.opened()); got != 4 {
+		t.Fatalf("two intruders must be 4 notifications (2 first + 2 summaries), got %d", got)
+	}
+}
+
+// A single touch is complete on its own. Sending a "1 times" summary fifteen
+// minutes later would be noise, which is the thing this whole mechanism exists
+// to prevent.
+func TestDigest_SingleTouchGetsNoSummary(t *testing.T) {
+	fstore, dstore := store.NewMemStore(), NewMemStore()
+	cap := &capCh{}
+	disp := notify.NewDispatcher(notify.Config{FlushInterval: time.Hour}, cap)
+	n := 0
+	s := &TripSink{
+		Store: fstore, Decoy: dstore, Disp: disp, DigestWindow: 15 * time.Minute,
+		NewID: func(tm time.Time) (string, error) { n++; return fmt.Sprintf("id-%04d", n), nil },
+	}
+	touch(t, s, t0, "203.0.113.9", "/admin")
+	if got := s.FlushDigests(t0.Add(20 * time.Minute)); len(got) != 0 {
+		t.Fatalf("a burst of one needs no summary, got %d", len(got))
+	}
+	disp.Close()
+	if got := len(cap.opened()); got != 1 {
+		t.Fatalf("one touch must be exactly one notification, got %d", got)
 	}
 }
