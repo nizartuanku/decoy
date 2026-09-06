@@ -104,6 +104,19 @@ func main() {
 	}
 
 	sink := &decoy.TripSink{Store: st, Decoy: decoyStore, Disp: disp}
+
+	// Close finished digest windows even when nothing touches the trap again,
+	// so a burst always gets its one counted summary. A minute's granularity
+	// against a fifteen-minute window is plenty, and an idle tick costs
+	// nothing.
+	digestTicker := time.NewTicker(time.Minute)
+	defer digestTicker.Stop()
+	go func() {
+		for tick := range digestTicker.C {
+			sink.FlushDigests(tick)
+		}
+	}()
+
 	supervisor := decoy.NewSupervisor(sink)
 	supervisor.BindHost = *honeypotBind
 	defer supervisor.StopAll()
