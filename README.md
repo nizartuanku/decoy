@@ -21,7 +21,7 @@ haystack; you plant a needle that screams.
 - **Document beacons** — a `.docx`/`.xlsx`/`.pdf` that phones home the moment it's opened, with the opener's IP.
 - **Honeypot services** — fake SSH/RDP/admin-panel/database ports that log every connection and every credential tried.
 - **DNS & cloud-credential traps** — catch scanners that resolve before they connect, and attackers harvesting fake keys (advanced).
-- **Alerts with the attacker's fingerprints** — source IP, time, what they touched — batched worst-first, never a flood.
+- **Alerts with the attacker's fingerprints** — source IP, time, what they touched. Repeated touches from the same trap, the same source IP and the same target inside a 15-minute window fold into one finding and one notification; every trip is still stored as evidence with a count and first/last seen.
 
 > *A vuln scanner asks "is it exploitable?" Decoy answers the question that comes first: "is someone already inside?"*
 
@@ -64,9 +64,11 @@ base-URL and honeypot placement details.
 | Document beacons | ✅ | ✅ | ✅ |
 | Honeypot listeners | 1 | 10 | Unlimited |
 | DNS / cloud-credential traps | — | ✅ | ✅ |
-| Alert channels | Webhook | + Email, Slack, Telegram | + PagerDuty, MS Teams |
+| Alert channels | Webhook, syslog | + Email, Slack, Telegram | + PagerDuty, MS Teams |
 | Trip history | 14 days | 1 year | Unlimited |
 | Support | Community | Email | Priority |
+
+**Whop sells paid licences only.** Free: github.com/nizartuanku/decoy — this repository is the free edition, Apache-2.0, no time limit; nothing on Whop is free, so try it here first.
 
 Pro ($29/mo) and Team ($99/mo) licenses, each with a 14-day free trial:
 **https://whop.com/nizar-tuanku/decoy-canary-honeypots?utm_source=github**
