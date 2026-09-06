@@ -18,6 +18,7 @@ package decoy
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/nizartuanku/decoy/core"
@@ -207,6 +208,93 @@ type TripSink struct {
 	// source, at the same thing into one finding and ONE notification. Zero
 	// means DefaultDigestWindow.
 	DigestWindow time.Duration
+
+	mu      sync.Mutex
+	pending map[string]*burstState
+}
+
+// burstState is a burst whose window has not closed yet. It exists so that
+// when the window DOES close the sink can say how many touches there were.
+// P-4 collapsed the flood correctly but the one notification that went out
+// was the FIRST touch, which by definition knows of no others: the reader was
+// told a trap was touched and never told it was touched twenty times. The
+// first notification is still sent immediately — an intrusion alert that
+// waits fifteen minutes is not an alert — and this adds a second, quiet one
+// at the end of the window carrying the count.
+type burstState struct {
+	trip   Trip
+	count  int
+	first  time.Time
+	last   time.Time
+	closes time.Time // end of the wall-clock bucket this burst belongs to
+}
+
+// burstCloses is the instant the trip's digest bucket ends.
+func burstCloses(t Trip, window time.Duration) time.Time {
+	w := digestWindow(window)
+	return t.At.UTC().Truncate(w).Add(w)
+}
+
+// FlushDigests emits the summary notification for every burst whose window
+// closed at or before now, and forgets it. A burst of exactly one touch gets
+// no summary — the first notification already said everything there is to
+// say. Returns the summary findings, in no particular order, so callers and
+// tests can see what went out.
+//
+// It is called on a ticker by cmd/decoy and may be called directly.
+func (s *TripSink) FlushDigests(now time.Time) []core.Finding {
+	s.mu.Lock()
+	var due []*burstState
+	for k, b := range s.pending {
+		if !b.closes.After(now.UTC()) {
+			due = append(due, b)
+			delete(s.pending, k)
+		}
+	}
+	s.mu.Unlock()
+
+	var out []core.Finding
+	for _, b := range due {
+		if b.count < 2 {
+			continue
+		}
+		f := s.summaryFinding(b)
+		out = append(out, f)
+		if s.Disp != nil {
+			s.Disp.Enqueue(notify.Event{Kind: notify.KindOpened, Module: ModuleID, Finding: f})
+		}
+	}
+	return out
+}
+
+// summaryFinding is the end-of-window notification. It carries its own
+// fingerprint (the burst's, suffixed) because the dispatcher collapses
+// duplicate fingerprints inside its flush window — reusing the burst's own
+// fingerprint would silently drop the summary whenever it landed in the same
+// batch as the first alert. It is never written to the store: the stored
+// finding is the burst itself, and its count is already correct.
+func (s *TripSink) summaryFinding(b *burstState) core.Finding {
+	f := tripFindingN(b.trip, s.DigestWindow, b.count, b.first, b.last)
+	ip := b.trip.SourceIP
+	if ip == "" {
+		ip = "an unknown source"
+	}
+	f.Fingerprint += ".summary"
+	f.Title = fmt.Sprintf("DECOY BURST ENDED: %s touched %d times by %s in the last %s",
+		b.trip.Label, b.count, ip, humanWindow(digestWindow(s.DigestWindow)))
+	f.Remediation = "This is the count for the burst already reported. Investigate " + ip +
+		" — a legitimate user has no reason to touch this."
+	f.Evidence["summary"] = true
+	return f
+}
+
+// humanWindow prints 15m0s as "15 min", which is what a notification should
+// say. Anything that is not a whole number of minutes is left to Duration.
+func humanWindow(w time.Duration) string {
+	if w%time.Minute == 0 {
+		return fmt.Sprintf("%d min", int(w/time.Minute))
+	}
+	return w.String()
 }
 
 // Record handles one trip end-to-end (Path A). It is safe to call from any
@@ -270,8 +358,25 @@ func (s *TripSink) Record(t Trip) error {
 		return err
 	}
 
+	// Remember the burst so the count can be reported when the window closes.
+	s.mu.Lock()
+	if s.pending == nil {
+		s.pending = make(map[string]*burstState)
+	}
+	if b, ok := s.pending[f.Fingerprint]; ok {
+		b.trip, b.count, b.first, b.last = t, count, first, last
+	} else {
+		s.pending[f.Fingerprint] = &burstState{
+			trip: t, count: count, first: first, last: last,
+			closes: burstCloses(t, s.DigestWindow),
+		}
+	}
+	s.mu.Unlock()
+
 	// One burst, one notification. A repeat inside the window is already on the
 	// dashboard with a rising count; paging someone again adds noise, not news.
+	// The count follows in a single summary when the window closes — see
+	// FlushDigests.
 	if s.Disp != nil && !repeat {
 		s.Disp.Enqueue(notify.Event{Kind: notify.KindOpened, Module: ModuleID, Finding: f})
 	}
