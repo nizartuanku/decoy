@@ -42,10 +42,10 @@ This is not an architectural preference. For a tool whose job is to record evide
 ## 7. Try it first
 The free Apache-2.0 edition on GitHub is the whole engine, with no time limit.
 ```
-curl -LO https://github.com/nizartuanku/decoy/releases/latest/download/decoy-free-0.1.0-linux-amd64.tar.gz
+curl -LO https://github.com/nizartuanku/decoy/releases/latest/download/decoy-free-0.1.1-linux-amd64.tar.gz
 curl -LO https://github.com/nizartuanku/decoy/releases/latest/download/SHA256SUMS
 sha256sum -c SHA256SUMS
-tar xzf decoy-free-0.1.0-linux-amd64.tar.gz && ./decoy
+tar xzf decoy-free-0.1.1-linux-amd64.tar.gz && ./decoy
 ```
 Plant four traps, touch one of them yourself, and see what the alert looks like before you decide whether it belongs in your network. Pro and Team editions are on Whop.
 Nizar Tuanku — Cybersecurity. · github.com/nizartuanku/decoy
