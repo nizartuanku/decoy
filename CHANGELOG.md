@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **`scripts/first-run.sh` — one command from a clean machine to a working dashboard.** It resolves the latest release at run time rather than pinning a tag, verifies the download against `SHA256SUMS` with no `--ignore-missing`, extracts, starts the binary and polls the dashboard until it answers. If the port is already taken it says so instead of letting the binary exit a second later and read like a broken product (`FIRST_RUN_PORT` overrides). When the unauthenticated GitHub API budget of 60 calls per hour is spent, the script now names the rate limit and when it resets, instead of reporting "cannot reach".
+- **The CONCEPTS install block points at an archive that exists.** `docs/CONCEPTS.md` still named the 0.1.0 asset after 0.1.1 was published, so the documented `curl` fetched a URL that had moved on. It names the 0.1.1 asset now.
+
 ## 0.1.1 — 2026-09-07
 
 ### A burst of touches is one alert, and the alert says how many
