@@ -60,6 +60,10 @@ func main() {
 	honeypotBind := flag.String("honeypot-bind", "0.0.0.0", "interface honeypots bind to")
 	dnsZone := flag.String("dns-zone", "", "delegated DNS zone for DNS tokens (empty = disabled)")
 	dnsListen := flag.String("dns-listen", ":53", "UDP address for the DNS responder (only if -dns-zone set)")
+	aiURL := flag.String("ai-assist-url", os.Getenv("DECOY_AI_ASSIST_URL"), "optional hexward-ai sidecar URL for AI-narrated explanations, e.g. http://127.0.0.1:8435 (off when empty)")
+	aiKeyFile := flag.String("ai-assist-key-file", os.Getenv("DECOY_AI_ASSIST_KEY_FILE"), "API key file for a dedicated AI host or your own OpenAI-compatible endpoint (Pro/Team)")
+	aiLang := flag.String("ai-assist-lang", os.Getenv("DECOY_AI_ASSIST_LANG"), "language of AI explanations: en (default) or id")
+	aiNoThinking := flag.Bool("ai-assist-no-thinking", os.Getenv("DECOY_AI_ASSIST_NO_THINKING") == "1", "disable reasoning mode (Qwen3 enterprise profiles)")
 	flag.Parse()
 
 	base := *baseURL
@@ -154,6 +158,16 @@ func main() {
 		}
 	}
 	server := web.NewServer(module.Describe(), st, scheduler, pub, *licFile)
+
+	aiAssist, aiErr := web.NewAIAssist(web.AIConfig{URL: *aiURL, KeyFile: *aiKeyFile, Language: *aiLang, NoThinking: *aiNoThinking})
+	if aiErr != nil {
+		fmt.Fprintln(os.Stderr, "decoy: "+aiErr.Error())
+		os.Exit(2)
+	}
+	server.AI = aiAssist
+	if aiAssist != nil {
+		fmt.Fprintf(os.Stderr, "decoy: AI Assist on — explanations from %s (language %s)\n", aiAssist.Endpoint, aiAssist.Language)
+	}
 	server.Targets = st
 	server.TierLimits = decoyTierLimits
 
