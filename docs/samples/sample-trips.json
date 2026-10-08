@@ -1,0 +1,45 @@
+{
+    "trips": [
+        {
+            "id": "01M4CM83NVFSTA32908J5ED5P8",
+            "deployment_id": "10795b08d2b1",
+            "kind": "honeypot",
+            "label": "decommissioned-admin-ssh",
+            "at": "2026-10-08T02:07:33.051509208Z",
+            "source_ip": "127.0.0.1",
+            "detail": {
+                "first_bytes": "SSH-2.0-OpenSSH_fake.",
+                "port": 12222,
+                "service": "ssh"
+            }
+        },
+        {
+            "id": "01M4CM83AX8XT6D5BHZ2X0B1NZ",
+            "deployment_id": "7b139d7a2eacd8f39c",
+            "kind": "web_token",
+            "label": "backup-keys-link",
+            "at": "2026-10-08T02:07:32.701243387Z",
+            "source_ip": "127.0.0.1",
+            "detail": {
+                "path": "/t/7b139d7a2eacd8f39c",
+                "query": "",
+                "referer": "",
+                "user_agent": "curl/8.5.0"
+            }
+        },
+        {
+            "id": "01M4CM83A69SZXCTNVQHAH7JP0",
+            "deployment_id": "7b139d7a2eacd8f39c",
+            "kind": "web_token",
+            "label": "backup-keys-link",
+            "at": "2026-10-08T02:07:32.678429379Z",
+            "source_ip": "127.0.0.1",
+            "detail": {
+                "path": "/t/7b139d7a2eacd8f39c",
+                "query": "",
+                "referer": "",
+                "user_agent": "curl/8.5.0"
+            }
+        }
+    ]
+}

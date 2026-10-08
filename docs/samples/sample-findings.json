@@ -1,0 +1,105 @@
+[
+    {
+        "fingerprint": "c53ca3d702883e1d00d4d03856dc795e",
+        "target": "10795b08d2b1",
+        "check": "trap.tripped",
+        "title": "DECOY TRIPPED: decommissioned-admin-ssh touched by 127.0.0.1",
+        "severity": "critical",
+        "status": "open",
+        "remediation": "Investigate 127.0.0.1 now. A legitimate user has no reason to touch this \u2014 treat it as a possible intrusion.",
+        "evidence": {
+            "at": "2026-10-08T02:07:33Z",
+            "count": 1,
+            "deployment_id": "10795b08d2b1",
+            "digest_window": "15m0s",
+            "first_bytes": "SSH-2.0-OpenSSH_fake.",
+            "first_seen": "2026-10-08T02:07:33Z",
+            "kind": "honeypot",
+            "last_seen": "2026-10-08T02:07:33Z",
+            "port": 12222,
+            "service": "ssh",
+            "source_ip": "127.0.0.1"
+        },
+        "first_seen": "2026-10-08T02:07:33.051509208Z",
+        "last_seen": "2026-10-08T02:07:33.051509208Z"
+    },
+    {
+        "fingerprint": "8183438d011dbdb258bcec93a3eb2883",
+        "target": "7b139d7a2eacd8f39c",
+        "check": "trap.tripped",
+        "title": "DECOY TRIPPED: backup-keys-link touched 2 times by 127.0.0.1",
+        "severity": "high",
+        "status": "open",
+        "remediation": "Investigate 127.0.0.1 now. A legitimate user has no reason to touch this \u2014 treat it as a possible intrusion.",
+        "evidence": {
+            "at": "2026-10-08T02:07:32Z",
+            "count": 2,
+            "deployment_id": "7b139d7a2eacd8f39c",
+            "digest_window": "15m0s",
+            "first_seen": "2026-10-08T02:07:32Z",
+            "kind": "web_token",
+            "last_seen": "2026-10-08T02:07:32Z",
+            "path": "/t/7b139d7a2eacd8f39c",
+            "query": "",
+            "referer": "",
+            "source_ip": "127.0.0.1",
+            "user_agent": "curl/8.5.0"
+        },
+        "first_seen": "2026-10-08T02:07:32.678429379Z",
+        "last_seen": "2026-10-08T02:07:32.701243387Z"
+    },
+    {
+        "fingerprint": "7431abc2bf1747c57c6771a20dd16535",
+        "target": "10795b08d2b1",
+        "check": "trap.armed",
+        "title": "Trap armed: decommissioned-admin-ssh (honeypot)",
+        "severity": "info",
+        "status": "open",
+        "remediation": "Leave it in place. You'll be alerted the moment anything touches it.",
+        "evidence": {
+            "deployment_id": "10795b08d2b1",
+            "host": "",
+            "kind": "honeypot",
+            "port": 12222,
+            "service": "ssh"
+        },
+        "first_seen": "2026-10-08T02:07:23.455066237Z",
+        "last_seen": "2026-10-08T02:07:23.455066237Z"
+    },
+    {
+        "fingerprint": "d83be45ca7de19cec1d55b0764a216b1",
+        "target": "c0bf7bed9af15e7285",
+        "check": "trap.armed",
+        "title": "Trap armed: salaries-export-2026 (web_token)",
+        "severity": "info",
+        "status": "open",
+        "remediation": "Leave it in place. You'll be alerted the moment anything touches it.",
+        "evidence": {
+            "deployment_id": "c0bf7bed9af15e7285",
+            "host": "",
+            "kind": "web_token",
+            "port": 0,
+            "service": ""
+        },
+        "first_seen": "2026-10-08T02:07:23.436095546Z",
+        "last_seen": "2026-10-08T02:07:23.436095546Z"
+    },
+    {
+        "fingerprint": "dd18f7fb154386f6dcd13481597cf6d4",
+        "target": "7b139d7a2eacd8f39c",
+        "check": "trap.armed",
+        "title": "Trap armed: backup-keys-link (web_token)",
+        "severity": "info",
+        "status": "open",
+        "remediation": "Leave it in place. You'll be alerted the moment anything touches it.",
+        "evidence": {
+            "deployment_id": "7b139d7a2eacd8f39c",
+            "host": "",
+            "kind": "web_token",
+            "port": 0,
+            "service": ""
+        },
+        "first_seen": "2026-10-08T02:07:23.394970984Z",
+        "last_seen": "2026-10-08T02:07:23.394970984Z"
+    }
+]

@@ -27,6 +27,8 @@ haystack; you plant a needle that screams.
 
 **Background reading** — [self-hosted deception: where it fits, and where it does not](https://nizartuanku.github.io/thinkst-canary-alternative.html), including an honest comparison with Canarytokens, OpenCanary and Thinkst Canary.
 
+**See the actual output** — [a real run, tripped and exported](docs/samples/): two web tokens and a honeypot, armed, touched, and reported exactly as the API returned them.
+
 ## Plant only in your own systems
 
 Decoy is bait for **your** environment, to catch someone in **your**

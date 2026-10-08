@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Docs: `docs/samples/` — a real Decoy run (two web tokens + a honeypot, armed and tripped), exported as `sample-findings.json`/`sample-trips.json`, linked from the README.
 - Docs: English is the supported AI Assist language in this release. Bahasa Indonesia
   (`-ai-assist-lang id`) is an unsupported preview; more languages will be added based on demand.
 
