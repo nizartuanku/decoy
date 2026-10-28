@@ -31,6 +31,7 @@ import (
 	"github.com/nizartuanku/decoy/sched"
 	"github.com/nizartuanku/decoy/store"
 	"github.com/nizartuanku/decoy/web"
+	"github.com/nizartuanku/hexward-core/hfs"
 )
 
 // issuerPublicKeyB64 is baked in at build time by the release process.
@@ -41,11 +42,11 @@ var issuerPublicKeyB64 = ""
 // channels/retention). The finer token-vs-honeypot-vs-advanced split lives in
 // decoy.DefaultCaps.
 var decoyTierLimits = map[license.Tier]license.Limits{
-	license.TierFree: {MaxTargets: 4, RetentionDays: 14, Channels: []string{"webhook", "syslog"}},
+	license.TierFree: {MaxTargets: 4, RetentionDays: 14, Channels: []string{"webhook", "syslog", "file", "splunk-hec"}},
 	license.TierPro: {MaxTargets: 60, RetentionDays: 365,
-		Channels: []string{"webhook", "syslog", "email", "slack", "telegram"}, CustomInterval: true, ScanNow: true},
+		Channels: []string{"webhook", "syslog", "file", "splunk-hec", "email", "slack", "telegram"}, CustomInterval: true, ScanNow: true},
 	license.TierTeam: {MaxTargets: 0, RetentionDays: 0,
-		Channels:  []string{"webhook", "syslog", "email", "slack", "telegram", "pagerduty", "teams"},
+		Channels:  []string{"webhook", "syslog", "file", "splunk-hec", "email", "slack", "telegram", "pagerduty", "teams"},
 		MultiUser: true, CustomInterval: true, ScanNow: true},
 }
 
@@ -53,9 +54,7 @@ func main() {
 	listen := flag.String("listen", "127.0.0.1:8424", "dashboard listen address")
 	dbPath := flag.String("db", "decoy.db", "SQLite database path")
 	licFile := flag.String("license", "decoy-license.key", "license key file")
-	webhook := flag.String("webhook", "", "webhook URL for alerts")
-	syslogAddr := flag.String("syslog", "", "syslog collector host:port for findings, e.g. 127.0.0.1:5514 (point this at Loglight to correlate across products)")
-	syslogNet := flag.String("syslog-network", "udp", "syslog transport: udp or tcp")
+	chf := registerChannelFlags(flag.CommandLine)
 	baseURL := flag.String("base-url", "", "public base URL tokens are reached at (default http://<listen>)")
 	honeypotBind := flag.String("honeypot-bind", "0.0.0.0", "interface honeypots bind to")
 	dnsZone := flag.String("dns-zone", "", "delegated DNS zone for DNS tokens (empty = disabled)")
@@ -94,12 +93,10 @@ func main() {
 	// Alerts flush fast — a canary that waits 30s is still a canary, but 5s is
 	// better, and a scanner's burst still merges into one digest.
 	var disp *notify.Dispatcher
-	var channels []notify.Channel
-	if *webhook != "" {
-		channels = append(channels, &notify.WebhookChannel{URL: *webhook})
-	}
-	if *syslogAddr != "" {
-		channels = append(channels, &notify.SyslogChannel{Addr: *syslogAddr, Network: *syslogNet})
+	channels, chErr := chf.build(hfs.Meta{Product: module.Describe().ID, Version: module.Describe().Version, Host: hostname()})
+	if chErr != nil {
+		fmt.Fprintln(os.Stderr, "decoy: "+chErr.Error())
+		os.Exit(2)
 	}
 	if len(channels) > 0 {
 		disp = notify.NewDispatcher(notify.Config{FlushInterval: 5 * time.Second}, channels...)
@@ -158,6 +155,8 @@ func main() {
 		}
 	}
 	server := web.NewServer(module.Describe(), st, scheduler, pub, *licFile)
+	server.ExportMeta = hfs.Meta{Product: module.Describe().ID, Version: module.Describe().Version, Host: hostname()}
+	server.ExportEvidence = chf.evidenceMode()
 
 	aiAssist, aiErr := web.NewAIAssist(web.AIConfig{URL: *aiURL, KeyFile: *aiKeyFile, Language: *aiLang, NoThinking: *aiNoThinking})
 	if aiErr != nil {

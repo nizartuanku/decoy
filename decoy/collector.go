@@ -33,7 +33,7 @@ func (c *Collector) Describe() core.ModuleInfo {
 	return core.ModuleInfo{
 		ID:              ModuleID,
 		Name:            "Decoy",
-		Version:         "0.1.2",
+		Version:         "0.1.3",
 		TargetKind:      "trap",
 		DefaultInterval: 15 * time.Minute,
 		ResolveAfter:    1,
