@@ -204,7 +204,7 @@ Environment equivalents: `DECOY_AI_ASSIST_URL`, `DECOY_AI_ASSIST_KEY_FILE`,
 
 ## Built by
 
-Nizar Tuanku — Cybersecurity. Part of the Hexward line of
+Nizar Tuanku — Cybersecurity Tools + AI. Part of the Hexward line of
 self-hosted security tools. Watch your certs with
 [CertLight](https://whop.com/nizar-tuanku/certlight-tls-monitor?utm_source=github) and your
 perimeter with [Attack Surface Monitor](https://whop.com/nizar-tuanku/attack-surface-monitor?utm_source=github) —
